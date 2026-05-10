@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Chama Zone | Admin Ledger</title>
+    <!-- Tailwind CSS + Google Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <!-- GSAP Animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <!-- SheetJS (Excel Export) Stable CDN -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <!-- Firebase v10 Modular (ES Modules) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js",
+                "firebase/auth": "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js",
+                "firebase/firestore": "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"
+            }
+        }
+    </script>
+    <style>
+        * {
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        body {
+            background: linear-gradient(145deg, #f0f9f4 0%, #d9ebe5 100%);
+            min-height: 100vh;
+        }
+        .glass-login {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            border-radius: 2rem;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(46, 125, 50, 0.2);
+        }
+        .card-dashboard {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(2px);
+            border-radius: 1.5rem;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+        .btn-emerald {
+            background-color: #059669;
+            transition: all 0.2s ease;
+        }
+        .btn-emerald:hover {
+            background-color: #047857;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(5, 150, 105, 0.3);
+        }
+        .btn-outline-emerald {
+            border: 1.5px solid #059669;
+            color: #059669;
+            transition: all 0.2s ease;
+        }
+        .btn-outline-emerald:hover {
+            background-color: #059669;
+            color: white;
+            transform: translateY(-2px);
+        }
+        .row-stagger {
+            transition: all 0.2s;
+        }
+        .delete-btn {
+            transition: all 0.15s;
+        }
+        .delete-btn:active {
+            transform: scale(0.96);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #059669;
+            border-radius: 10px;
+        }
+        input, select {
+            outline: none;
+        }
+        .table-container {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .tab-active {
+            border-bottom: 3px solid #059669;
+            color: #065f46;
+            font-weight: 600;
+        }
+        .tab-inactive {
+            border-bottom: 3px solid transparent;
+            color: #6b7280;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 antialiased">
+
+    <!-- LOGIN/SIGNUP SECTION (Centered with Tabs) -->
+    <div id="loginSection" class="min-h-screen flex items-center justify-center px-4">
+        <div class="glass-login w-full max-w-md p-6 md:p-8 transition-all duration-300">
+            <div class="text-center mb-6">
+                <h1 class="text-4xl font-extrabold bg-gradient-to-r from-emerald-700 to-teal-600 bg-clip-text text-transparent">Chama Zone</h1>
+                <p class="text-slate-600 mt-2 font-medium">Group Financial Ledger</p>
+                <div class="w-16 h-1 bg-emerald-500 mx-auto mt-3 rounded-full"></div>
+            </div>
+            
+            <!-- Tab Buttons -->
+            <div class="flex gap-2 mb-6 border-b border-gray-200">
+                <button id="loginTabBtn" class="flex-1 py-2.5 text-base font-semibold transition-all duration-200 tab-active">Sign In</button>
+                <button id="signupTabBtn" class="flex-1 py-2.5 text-base font-semibold transition-all duration-200 tab-inactive">Create Account</button>
+            </div>
+            
+            <!-- Login Form -->
+            <div id="loginFormPanel">
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-slate-700 font-semibold mb-1 text-sm">Email Address</label>
+                        <input type="email" id="loginEmail" class="w-full px-5 py-3 rounded-xl border border-slate-200 bg-white/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition" placeholder="admin@chama.com">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-semibold mb-1 text-sm">Password</label>
+                        <input type="password" id="loginPassword" class="w-full px-5 py-3 rounded-xl border border-slate-200 bg-white/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition" placeholder="••••••••">
+                    </div>
+                    <button id="loginBtn" class="btn-emerald w-full text-white font-bold py-3 rounded-xl shadow-md text-lg transition">Sign In →</button>
+                    <p id="loginErrorMsg" class="text-red-600 text-sm text-center hidden mt-3"></p>
+                </div>
+            </div>
+            
+            <!-- Sign Up Form (hidden by default) -->
+            <div id="signupFormPanel" class="hidden">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-slate-700 font-semibold mb-1 text-sm">Full Name</label>
+                        <input type="text" id="signupName" class="w-full px-5 py-3 rounded-xl border border-slate-200 bg-white/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition" placeholder="Jane Wanjiku">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-semibold mb-1 text-sm">Email Address</label>
+                        <input type="email" id="signupEmail" class="w-full px-5 py-3 rounded-xl border border-slate-200 bg-white/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition" placeholder="admin@chama.com">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-semibold mb-1 text-sm">Chama Name</label>
+                        <input type="text" id="signupChamaName" class="w-full px-5 py-3 rounded-xl border border-slate-200 bg-white/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition" placeholder="e.g., Umoja Weusi Chama">
+                        <p class="text-xs text-slate-400 mt-1">This will be your group's primary title</p>
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-semibold mb-1 text-sm">Password (min 6 characters)</label>
+                        <input type="password" id="signupPassword" class="w-full px-5 py-3 rounded-xl border border-slate-200 bg-white/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition" placeholder="••••••••">
+                    </div>
+                    <div>
+                        <label class="block text-slate-700 font-semibold mb-1 text-sm">Confirm Password</label>
+                        <input type="password" id="signupConfirmPassword" class="w-full px-5 py-3 rounded-xl border border-slate-200 bg-white/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition" placeholder="••••••••">
+                    </div>
+                    <button id="signupBtn" class="btn-emerald w-full text-white font-bold py-3 rounded-xl shadow-md text-lg transition">Create Account →</button>
+                    <p id="signupErrorMsg" class="text-red-600 text-sm text-center hidden mt-3"></p>
+                </div>
+            </div>
+            
+            <div class="mt-6 text-center text-xs text-slate-400">
+                Secure Firebase Authentication · Real-time Ledger
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP SECTION (hidden until auth) -->
+    <div id="appSection" class="hidden max-w-7xl mx-auto">
+        <!-- Header / Brand -->
+        <div class="flex flex-wrap justify-between items-center mb-6 gap-3">
+            <div>
+                <h1 id="chamaNameHeader" class="text-2xl md:text-3xl font-black text-emerald-800 tracking-tight">📊 Chama Zone Ledger</h1>
+                <p class="text-slate-500 text-sm">Real-time contributions · KSH currency</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="exportExcelBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl shadow-md font-semibold flex items-center gap-2 transition"><span>📎</span> Export Excel</button>
+                <button id="logoutBtn" class="bg-slate-600 hover:bg-slate-700 text-white px-5 py-2.5 rounded-xl shadow-md font-semibold transition">🚪 Logout</button>
+            </div>
+        </div>
+
+        <!-- Data Entry Form: name, recipient, amount -->
+        <div class="card-dashboard p-5 md:p-6 mb-8">
+            <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><span class="w-2 h-6 bg-emerald-500 rounded-full"></span> Record New Contribution</h2>
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <label class="block text-xs uppercase font-semibold text-slate-500 mb-1">Contributor Name</label>
+                    <input type="text" id="contributorName" placeholder="e.g., Jane Wanjiku" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-emerald-300">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xs uppercase font-semibold text-slate-500 mb-1">Recipient ("Contributing To")</label>
+                    <input type="text" id="recipientName" placeholder="e.g., Merry-Go-Round / Welfare" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-emerald-300">
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xs uppercase font-semibold text-slate-500 mb-1">Amount (KSH)</label>
+                    <input type="number" id="amountKsh" placeholder="0" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-emerald-300">
+                </div>
+                <div class="flex items-end">
+                    <button id="submitContributionBtn" class="btn-emerald w-full md:w-auto px-8 py-3 text-white font-bold rounded-xl shadow transition">+ Add Entry</button>
+                </div>
+            </div>
+            <p id="formFeedback" class="text-emerald-700 text-sm mt-3 hidden"></p>
+        </div>
+
+        <!-- Contributions Table (Real-time, descending by createdAt) -->
+        <div class="card-dashboard p-5 overflow-hidden">
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <h2 class="text-xl font-bold text-slate-800">📋 Contribution History</h2>
+                <div class="text-xs bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full">Live data · Firestore</div>
+            </div>
+            <div class="table-container">
+                <table class="min-w-full text-sm border-collapse">
+                    <thead class="bg-emerald-50/80 rounded-lg">
+                        <tr class="text-left text-slate-700 font-semibold">
+                            <th class="p-3 rounded-l-lg">DATE (DD/MM/YYYY)</th>
+                            <th class="p-3">CONTRIBUTOR</th>
+                            <th class="p-3">RECIPIENT</th>
+                            <th class="p-3">AMOUNT (KSH)</th>
+                            <th class="p-3 rounded-r-lg">ACTION</th>
+                          </tr>
+                    </thead>
+                    <tbody id="contributionsTableBody">
+                        <tr><td colspan="5" class="text-center py-10 text-slate-400">Loading contributions...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="text-center text-slate-400 text-xs py-6">Powered by Chama Zone — real-time group finance</div>
+    </div>
+
+    <script type="module">
+        // -------- FIREBASE IMPORTS & CONFIG (EXACT CREDENTIALS) --------
+        import { initializeApp } from "firebase/app";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+        import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, Timestamp, getDocs, setDoc } from "firebase/firestore";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDC9sKoc6smW7UFPrEPtp8WpnDjpB5noH4",
+            authDomain: "chama-zone.firebaseapp.com",
+            projectId: "chama-zone",
+            storageBucket: "chama-zone.firebasestorage.app",
+            messagingSenderId: "248065824780",
+            appId: "1:248065824780:web:21cb718f685d9a7dc5b629",
+            measurementId: "G-22MP9XJ133"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Firestore collection reference
+        const contributionsRef = collection(db, "contributions");
+        let unsubscribeSnapshot = null;
+        let currentChamaName = "Chama Zone";
+        
+        // DOM elements
+        const loginSection = document.getElementById('loginSection');
+        const appSection = document.getElementById('appSection');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginEmail = document.getElementById('loginEmail');
+        const loginPassword = document.getElementById('loginPassword');
+        const loginErrorMsg = document.getElementById('loginErrorMsg');
+        const signupBtn = document.getElementById('signupBtn');
+        const signupName = document.getElementById('signupName');
+        const signupEmail = document.getElementById('signupEmail');
+        const signupChamaName = document.getElementById('signupChamaName');
+        const signupPassword = document.getElementById('signupPassword');
+        const signupConfirmPassword = document.getElementById('signupConfirmPassword');
+        const signupErrorMsg = document.getElementById('signupErrorMsg');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const submitBtn = document.getElementById('submitContributionBtn');
+        const contributorNameInput = document.getElementById('contributorName');
+        const recipientNameInput = document.getElementById('recipientName');
+        const amountKshInput = document.getElementById('amountKsh');
+        const formFeedback = document.getElementById('formFeedback');
+        const exportExcelBtn = document.getElementById('exportExcelBtn');
+        const tableBody = document.getElementById('contributionsTableBody');
+        const chamaNameHeader = document.getElementById('chamaNameHeader');
+        
+        // Tab elements
+        const loginTabBtn = document.getElementById('loginTabBtn');
+        const signupTabBtn = document.getElementById('signupTabBtn');
+        const loginFormPanel = document.getElementById('loginFormPanel');
+        const signupFormPanel = document.getElementById('signupFormPanel');
+        
+        // Tab switching logic
+        loginTabBtn.addEventListener('click', () => {
+            loginTabBtn.classList.remove('tab-inactive');
+            loginTabBtn.classList.add('tab-active');
+            signupTabBtn.classList.remove('tab-active');
+            signupTabBtn.classList.add('tab-inactive');
+            loginFormPanel.classList.remove('hidden');
+            signupFormPanel.classList.add('hidden');
+            // Clear any errors
+            loginErrorMsg.classList.add('hidden');
+            signupErrorMsg.classList.add('hidden');
+        });
+        
+        signupTabBtn.addEventListener('click', () => {
+            signupTabBtn.classList.remove('tab-inactive');
+            signupTabBtn.classList.add('tab-active');
+            loginTabBtn.classList.remove('tab-active');
+            loginTabBtn.classList.add('tab-inactive');
+            signupFormPanel.classList.remove('hidden');
+            loginFormPanel.classList.add('hidden');
+            // Clear any errors
+            loginErrorMsg.classList.add('hidden');
+            signupErrorMsg.classList.add('hidden');
+        });
+        
+        // Helper: show temporary feedback
+        function showFeedback(msg, isError = false) {
+            formFeedback.innerText = msg;
+            formFeedback.classList.remove('hidden');
+            formFeedback.style.color = isError ? '#b91c1c' : '#047857';
+            setTimeout(() => formFeedback.classList.add('hidden'), 2800);
+        }
+        
+        // Format date from Firestore Timestamp (en-GB)
+        function formatDate(dateValue) {
+            if (!dateValue) return 'N/A';
+            let jsDate;
+            if (dateValue?.toDate) jsDate = dateValue.toDate();
+            else if (dateValue instanceof Date) jsDate = dateValue;
+            else jsDate = new Date(dateValue);
+            if (isNaN(jsDate.getTime())) return 'Invalid Date';
+            return jsDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+        
+        // Render table with realtime data
+        function renderContributions(contributionsArray) {
+            if (!tableBody) return;
+            if (!contributionsArray.length) {
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-slate-400">✨ No contributions yet. Add the first record!</td></tr>`;
+                return;
+            }
+            let html = '';
+            contributionsArray.forEach(docData => {
+                const data = docData.data;
+                const docId = docData.id;
+                const amountVal = typeof data.amount === 'number' ? data.amount : 0;
+                html += `
+                    <tr class="row-stagger border-b border-slate-100 hover:bg-emerald-50/50 transition" data-id="${docId}">
+                        <td class="p-3 text-slate-600 font-mono text-xs md:text-sm">${formatDate(data.createdAt)}</td>
+                        <td class="p-3 font-medium text-slate-800">${escapeHtml(data.name || '')}</td>
+                        <td class="p-3 text-slate-700">${escapeHtml(data.recipient || '')}</td>
+                        <td class="p-3 font-semibold text-emerald-700">KSH ${amountVal.toLocaleString()}</td>
+                        <td class="p-3">
+                            <button class="delete-entry bg-red-50 hover:bg-red-100 text-red-600 rounded-full px-3 py-1.5 text-xs font-semibold transition delete-btn shadow-sm" data-id="${docId}">🗑 Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tableBody.innerHTML = html;
+            
+            gsap.fromTo('.row-stagger', 
+                { opacity: 0, y: 12 },
+                { opacity: 1, y: 0, duration: 0.35, stagger: 0.03, ease: "back.out(0.3)" }
+            );
+            
+            document.querySelectorAll('.delete-entry').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const id = btn.getAttribute('data-id');
+                    if (id && confirm("Are you sure you want to delete this contribution?")) {
+                        try {
+                            await deleteDoc(doc(db, "contributions", id));
+                            showFeedback("✅ Entry deleted successfully.", false);
+                        } catch (err) {
+                            showFeedback("❌ Delete failed: " + err.message, true);
+                        }
+                    }
+                });
+            });
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        function attachRealtimeListener() {
+            if (unsubscribeSnapshot) unsubscribeSnapshot();
+            const q = query(contributionsRef, orderBy("createdAt", "desc"));
+            unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
+                const items = [];
+                querySnapshot.forEach((docSnap) => {
+                    items.push({ id: docSnap.id, data: docSnap.data() });
+                });
+                renderContributions(items);
+            }, (error) => {
+                console.error("Snapshot error:", error);
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-red-500">⚠️ Real-time connection error.</td></tr>`;
+            });
+        }
+        
+        // Add contribution
+        async function addContribution() {
+            const name = contributorNameInput.value.trim();
+            const recipient = recipientNameInput.value.trim();
+            let amount = parseFloat(amountKshInput.value);
+            
+            if (!name) { showFeedback("Please enter contributor name", true); return; }
+            if (!recipient) { showFeedback("Please enter recipient", true); return; }
+            if (isNaN(amount) || amount <= 0) { showFeedback("Amount must be positive number in KSH", true); return; }
+            
+            try {
+                await addDoc(contributionsRef, {
+                    name: name,
+                    recipient: recipient,
+                    amount: amount,
+                    createdAt: Timestamp.now()
+                });
+                contributorNameInput.value = '';
+                recipientNameInput.value = '';
+                amountKshInput.value = '';
+                showFeedback(`✅ ${name} contributed KSH ${amount.toLocaleString()} to ${recipient}.`, false);
+                gsap.fromTo("#submitContributionBtn", { scale: 0.96 }, { scale: 1, duration: 0.2 });
+            } catch (err) {
+                showFeedback("Firestore error: " + err.message, true);
+            }
+        }
+        
+        // Export to Excel with auto-width
+        async function exportToExcel() {
+            try {
+                exportExcelBtn.innerHTML = '<span>⏳</span> Exporting...';
+                exportExcelBtn.disabled = true;
+                const querySnapshot = await getDocs(query(contributionsRef, orderBy("createdAt", "desc")));
+                if (querySnapshot.empty) {
+                    alert("No data to export.");
+                    exportExcelBtn.innerHTML = '<span>📎</span> Export Excel';
+                    exportExcelBtn.disabled = false;
+                    return;
+                }
+                const excelRows = [["DATE", "CONTRIBUTOR NAME", "RECIPIENT", "AMOUNT (KSH)"]];
+                let contributorValues = ["CONTRIBUTOR NAME"];
+                let recipientValues = ["RECIPIENT"];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const dateFormatted = formatDate(data.createdAt);
+                    const contributorUpper = (data.name || "").toUpperCase();
+                    const recipientUpper = (data.recipient || "").toUpperCase();
+                    const amountValue = typeof data.amount === 'number' ? data.amount : 0;
+                    const amountFormatted = `KSH ${amountValue.toLocaleString()}`;
+                    excelRows.push([dateFormatted, contributorUpper, recipientUpper, amountFormatted]);
+                    contributorValues.push(contributorUpper);
+                    recipientValues.push(recipientUpper);
+                });
+                const ws = XLSX.utils.aoa_to_sheet(excelRows);
+                let maxContributorLen = 0, maxRecipientLen = 0;
+                contributorValues.forEach(val => { if (val && val.length > maxContributorLen) maxContributorLen = val.length; });
+                recipientValues.forEach(val => { if (val && val.length > maxRecipientLen) maxRecipientLen = val.length; });
+                ws['!cols'] = [
+                    { wch: 14 },
+                    { wch: Math.min(45, maxContributorLen + 3) },
+                    { wch: Math.min(45, maxRecipientLen + 3) },
+                    { wch: 18 }
+                ];
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Chama_Contributions");
+                const now = new Date();
+                const filename = `ChamaZone_Export_${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}.xlsx`;
+                XLSX.writeFile(wb, filename);
+                showFeedback(`📊 Exported ${querySnapshot.size} contributions!`, false);
+            } catch (error) {
+                alert("Export failed: " + error.message);
+            } finally {
+                exportExcelBtn.innerHTML = '<span>📎</span> Export Excel';
+                exportExcelBtn.disabled = false;
+            }
+        }
+        
+        // SIGN UP: Create new user and initialize chama profile
+        async function handleSignUp() {
+            const name = signupName.value.trim();
+            const email = signupEmail.value.trim();
+            const chamaName = signupChamaName.value.trim();
+            const password = signupPassword.value;
+            const confirmPassword = signupConfirmPassword.value;
+            
+            signupErrorMsg.classList.add('hidden');
+            
+            if (!name || !email || !chamaName || !password) {
+                signupErrorMsg.innerText = "All fields are required.";
+                signupErrorMsg.classList.remove('hidden');
+                return;
+            }
+            if (password.length < 6) {
+                signupErrorMsg.innerText = "Password must be at least 6 characters.";
+                signupErrorMsg.classList.remove('hidden');
+                return;
+            }
+            if (password !== confirmPassword) {
+                signupErrorMsg.innerText = "Passwords do not match.";
+                signupErrorMsg.classList.remove('hidden');
+                return;
+            }
+            
+            try {
+                const userCred = await createUserWithEmailAndPassword(auth, email, password);
+                const uid = userCred.user.uid;
+                // Store user profile in Firestore (user document)
+                await setDoc(doc(db, "users", uid), {
+                    name: name,
+                    email: email,
+                    chamaName: chamaName,
+                    createdAt: Timestamp.now()
+                });
+                currentChamaName = chamaName;
+                chamaNameHeader.innerText = `📊 ${chamaName}`;
+                // Auto-login will trigger onAuthStateChanged
+            } catch (err) {
+                signupErrorMsg.innerText = err.message;
+                signupErrorMsg.classList.remove('hidden');
+            }
+        }
+        
+        // Login
+        async function handleLogin() {
+            const email = loginEmail.value.trim();
+            const password = loginPassword.value;
+            if (!email || !password) {
+                loginErrorMsg.innerText = "Please enter both email and password.";
+                loginErrorMsg.classList.remove('hidden');
+                return;
+            }
+            loginErrorMsg.classList.add('hidden');
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (err) {
+                loginErrorMsg.innerText = "Invalid email or password.";
+                loginErrorMsg.classList.remove('hidden');
+                gsap.fromTo("#loginBtn", { x: 3 }, { x: 0, duration: 0.2, repeat: 2 });
+            }
+        }
+        
+        async function handleLogout() {
+            await signOut(auth);
+        }
+        
+        // Auth state handler
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Fetch user's chama name
+                try {
+                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    if (userDoc.exists() && userDoc.data().chamaName) {
+                        currentChamaName = userDoc.data().chamaName;
+                        chamaNameHeader.innerText = `📊 ${currentChamaName}`;
+                    } else {
+                        chamaNameHeader.innerText = `📊 Chama Zone`;
+                    }
+                } catch(e) { console.warn(e); }
+                
+                gsap.to(loginSection, { 
+                    opacity: 0, duration: 0.3, onComplete: () => {
+                        loginSection.classList.add('hidden');
+                        appSection.classList.remove('hidden');
+                        gsap.fromTo(appSection, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 });
+                        if (unsubscribeSnapshot) unsubscribeSnapshot();
+                        attachRealtimeListener();
+                    }
+                });
+            } else {
+                if (unsubscribeSnapshot) { unsubscribeSnapshot(); unsubscribeSnapshot = null; }
+                appSection.classList.add('hidden');
+                loginSection.classList.remove('hidden');
+                loginSection.style.opacity = '1';
+                loginEmail.value = '';
+                loginPassword.value = '';
+                signupName.value = '';
+                signupEmail.value = '';
+                signupChamaName.value = '';
+                signupPassword.value = '';
+                signupConfirmPassword.value = '';
+                loginErrorMsg.classList.add('hidden');
+                signupErrorMsg.classList.add('hidden');
+                if (tableBody) tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-10 text-slate-400">Please sign in</td></tr>`;
+                gsap.fromTo(".glass-login", { scale: 0.97, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5 });
+            }
+        });
+        
+        // Event listeners
+        loginBtn.addEventListener('click', handleLogin);
+        signupBtn.addEventListener('click', handleSignUp);
+        logoutBtn.addEventListener('click', handleLogout);
+        submitBtn.addEventListener('click', addContribution);
+        exportExcelBtn.addEventListener('click', exportToExcel);
+        
+        // Enter key support
+        const handleEnterLogin = (e) => { if (e.key === 'Enter') handleLogin(); };
+        loginEmail.addEventListener('keypress', handleEnterLogin);
+        loginPassword.addEventListener('keypress', handleEnterLogin);
+        
+        const handleEnterSignup = (e) => { if (e.key === 'Enter') handleSignUp(); };
+        signupName.addEventListener('keypress', handleEnterSignup);
+        signupEmail.addEventListener('keypress', handleEnterSignup);
+        signupChamaName.addEventListener('keypress', handleEnterSignup);
+        signupPassword.addEventListener('keypress', handleEnterSignup);
+        signupConfirmPassword.addEventListener('keypress', handleEnterSignup);
+        
+        [contributorNameInput, recipientNameInput, amountKshInput].forEach(inp => {
+            inp.addEventListener('keypress', (e) => { if (e.key === 'Enter') addContribution(); });
+        });
+        
+        gsap.fromTo(".glass-login", { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6 });
+    </script>
+</body>
+  </html>
